@@ -7,7 +7,7 @@ GET {{baseUrl}}/api/v1/health
 GET {{baseUrl}}/api/v1/todos?completed=false
 
 ### Get a specific Todo
-GET {{baseUrl}}/api/v1/todos/1
+GET {{baseUrl}}/api/v1/todos/6
 
 ### Create a Todo
 POST {{baseUrl}}/api/v1/todos
@@ -21,7 +21,7 @@ Content-Type: application/json
 }
 
 ### Update a Todo
-PUT {{baseUrl}}/api/v1/todos/1
+PUT {{baseUrl}}/api/v1/todos/2
 Content-Type: application/json
 
 {

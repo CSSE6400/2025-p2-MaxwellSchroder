@@ -50,7 +50,7 @@ def get_todos():
 
         query = query.filter(Todo.deadline_at != None)
         query = query.filter(Todo.deadline_at <= deadline_limit)
-        query = query.filter(Todo.deadline_at >= datetime.now())
+        # query = query.filter(Todo.deadline_at >= datetime.now())
 
     todos = query.all()
     result = []
@@ -70,10 +70,26 @@ def get_todo(todo_id):
 ### Creating a todo
 @api.route("/todos", methods=["POST"])
 def create_todo():
+    data = request.get_json()
+
+    if not data:
+        return jsonify({"error": "No JSON body"}), 400
+
+    # check for any other fields than expected fields
+    unexpected_fields = set(data.keys() - {"title", "description", "completed", "deadline_at"})
+    if unexpected_fields:
+        return jsonify({"error": "Unexpected fields in request",
+                        "unexpected": list(unexpected_fields)}), 400
+
+    title = request.json.get("title")
+    
+    if title is None:
+        return jsonify({"error": "No title included"}), 400
+
     todo = Todo(
-        title=request.json.get("title"),
-        description=request.json.get("description"),
-        completed=request.json.get("completed", False)
+        title=title,
+        description=request.json.get("description", ""),
+        completed=request.json.get("completed", False),
     )
     if "deadline_at" in request.json:
         todo.deadline_at = datetime.fromisoformat(request.json.get("deadline_at"))
@@ -90,7 +106,18 @@ def update_todo(todo_id):
     """Update a todo item and return the updated item"""
     todo = Todo.query.get(todo_id)
     if todo is None:
-        return jsonify({"error","Todo not found"}), 404
+        return jsonify({"error":"Todo not found"}), 404
+
+    data = request.get_json()
+
+    if not data:
+        return jsonify({"error": "No JSON body"}), 400
+
+    # check for any other fields than expected fields
+    unexpected_fields = set(data.keys() - {"title", "description", "completed", "deadline_at"})
+    if unexpected_fields:
+        return jsonify({"error": "Unexpected fields in request",
+                        "unexpected": list(unexpected_fields)}), 400
 
     todo.title = request.json.get('title', todo.title)
     todo.description = request.json.get('description', todo.description)
@@ -98,12 +125,16 @@ def update_todo(todo_id):
         todo.completed = str_to_bool(request.json.get('completed'))
     
     if request.json.get('deadline_at'):
-        todo.deadline_at = datetime.fromisoformat(request.json.get('deadline_at'))
+        try:
+            request_deadline_at =  datetime.fromisoformat(request.json.get('deadline_at'))
+            todo.deadline_at = request_deadline_at
+        except ValueError as e:
+            return jsonify({"error": "deadline_at given but in incorrect format"}), 400
     
     # Commit changes to DB to save changes to file
     db.session.commit()
 
-    return jsonify(todo.to_dict())
+    return jsonify(todo.to_dict()), 200
 
 
 @api.route('/todos/<int:todo_id>', methods=['DELETE'])
@@ -114,8 +145,7 @@ def delete_todo(todo_id):
 
     # check if none, return error
     if todo is None:
-        return jsonify({}), 400
-
+        return jsonify({}), 200
 
     # delete from session and commit
     db.session.delete(todo)
